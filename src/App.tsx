@@ -1,4 +1,5 @@
 import React,{useState} from 'react';
+import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
 import img1 from './images/1.png';
 import img2 from './images/2.png';
 import img3 from './images/3.png';
@@ -6,7 +7,6 @@ import img4 from './images/4.png';
 import img5 from './images/5.png';
 import img6 from './images/6.png';
 import img7 from './images/7.png';
-import './App.css';
 import { Grid,Button } from '@mui/material';
 import Notification from './layout/notification';
 
@@ -30,53 +30,46 @@ function App() {
     message: ''
   })
   
-  const handleOnDrag = (e:React.DragEvent, id:number , img:string)=>{
-    e.dataTransfer.setData('id',id.toString())
-
-  }
-  const handleOnDrop = (e:React.DragEvent)=>{
-    const id =  e.dataTransfer.getData('id') as string;
-    const imgObj  = unorderedList.find(img=>img.id==parseInt(id, 10)) as Iimage;
-    
-    setOrderedList([...orderedList,imgObj])
-    setUnOrderedList(unorderedList.filter(img=>img.id!=parseInt(id, 10)));
-    if(isTrueOrdered){
-      if (index== parseInt(id, 10)) {
-        setIsTrueOrdered(true)
-      }else{
-        setIsTrueOrdered(false)
-      }
-      setIndex(index+1)
-    }
-  }
-  const handleDragOver = (e:React.DragEvent)=>{
-    e.preventDefault();
-  }
   
-  const handleSubmit= ()=>{
-    if (isTrueOrdered) {
-      setNotificationObj({
-        open: true, type: 'success', message: `تبریک می گویم! شما موفق شدید.`
+    const checkList = ()=>{
+      let isTrueOrdered = true;
+      orderedList.map((imgObj,index)=>{
+        if (isTrueOrdered) {
+          if (imgObj.id == (index+1)) {
+            isTrueOrdered =true
+          }else{
+            isTrueOrdered = false
+          }
+          
+        }
       })
-      setTimeout(
+      return isTrueOrdered;
+    }
+
+    const handleSubmit= ()=>{
+      let isTrueOrdered = checkList();
+      if (isTrueOrdered) {
+        setNotificationObj({
+          open: true, type: 'success', message: `تبریک می گویم! شما موفق شدید.`
+        })
+        setTimeout(
+            () => setNotificationObj({
+              open: false,
+              type: 'success',
+              message: ''
+            }
+            ), 3000);
+      }else{
+        setNotificationObj({
+          open: true, type: 'error', message: `شما بازی را باختید!`
+        })
+        setTimeout(
           () => setNotificationObj({
             open: false,
-            type: 'success',
+            type: 'error',
             message: ''
           }
           ), 3000);
-    }else{
-      setNotificationObj({
-        open: true, type: 'error', message: `شما بازی را باختید!`
-      })
-      setTimeout(
-        () => setNotificationObj({
-          open: false,
-          type: 'error',
-          message: ''
-        }
-        ), 3000);
-        console.log("Sorry! You can't win this game.");
       }
     }
     
@@ -87,45 +80,119 @@ function App() {
       setIsTrueOrdered(true)
     }
   
+    const handleDragAndDrop = (results:any) => {
+      const { source, destination } = results;
+      if (!destination) return
+      if(source.droppableId == destination.droppableId){
+        if (destination.droppableId =="Root") {
+          const orderedArray = [...orderedList];
+          const [deletedItem] = orderedArray.splice(source.index, 1);
+          orderedArray.splice(destination.index, 0, deletedItem)
+          setOrderedList(orderedArray)
+        } else {
+          const unOrderedArray = [...unorderedList];
+          const [deletedItem] = unOrderedArray.splice(source.index, 1);
+          unOrderedArray.splice(destination.index, 0, deletedItem)
+          setUnOrderedList(unOrderedArray)
+        }
+
+      }else{
+        if (destination.droppableId =="Root") {
+          const orderedArray = [...orderedList];
+          const unOrderedArray = [...unorderedList];
+          
+          const [deletedItem] = unOrderedArray.splice(source.index, 1);
+          orderedArray.splice(destination.index, 0, deletedItem)
+          
+          setOrderedList(orderedArray)
+          setUnOrderedList(unOrderedArray);
+        } else {
+          const orderedArray = [...orderedList];
+          const unOrderedArray = [...unorderedList];
+          const [deletedItem] = orderedArray.splice(source.index, 1);
+          unOrderedArray.splice(destination.index, 0, deletedItem)
+          setOrderedList(orderedArray)
+          setUnOrderedList(unOrderedArray);
+        }
+      }
+      
+    }
   return (
     <div >
-      <Grid xs={12} display="flex" justifyContent="center" mt={5} dir="rtl">
-        <h2>لیست مرتب شده</h2>
-      </Grid>
-      <Grid xs={12} height="318px" display='flex' 
-        justifyContent='center' mt={3} 
-        border="1px solid black" 
-        onDrop={handleOnDrop}
-        onDragOver={handleDragOver}
-        sx={orderedList.length==0?{alignItems:'center'}:{}}
-        dir={orderedList.length==0?"rtl":"ltr"}
-      >
-        
-        {orderedList.length!=0?orderedList.map((imgObj)=>{
-          return(
-            <img src={imgObj.img} />
-          )
-        }):"لطفا لیست خود را مرتب کنید."
-        }
-      </Grid>
-      <Grid xs={12} display="flex" justifyContent="center" mt={5} dir="rtl">
-        <h2>لیست مرتب نشده</h2>
-      </Grid>
-      <Grid xs={12} height={unorderedList.length==0?"150px":"318px"} display='flex' justifyContent='center'sx={unorderedList.length==0?{alignItems:'center'}:{}} 
-      mt={3} border="1px solid black" 
-      dir={unorderedList.length==0?"rtl":"ltr"}>
-        
-        {
-          unorderedList.length!=0?
-        unorderedList.map((unordered)=>{
-          return(
-            <img draggable onDragStart={(e)=>handleOnDrag(e,unordered.id,unordered.img)} src={unordered.img} style={{cursor:'pointer'}}/>
-          )
-        })
-        :"لیست شما خالی شد."
-        }
-      </Grid>
-
+      <DragDropContext onDragEnd={handleDragAndDrop}>
+        <Grid xs={12} display="flex" justifyContent="center" mt={5} dir="rtl">
+          <h2>لیست مرتب شده</h2>
+        </Grid>
+        <Grid display='flex' justifyContent='center' border="1px solid black" xs={12} container >
+          <Droppable droppableId='Root' key='Root' direction='horizontal' >
+            {(provided)=>{
+              return(
+                <Grid item xs={12} {...provided.droppableProps} ref={provided.innerRef} display='flex' justifyContent='center'  alignItems='center' height={"318px"}>
+                    {orderedList.length!=0? orderedList.map((imgObj,index)=>{
+                      return(
+                        <Draggable key={imgObj.id} draggableId={imgObj.id.toString()} index={index}>
+                          {(provided)=>{
+                            return(
+                              <Grid 
+                              pt="5px"
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}>
+                                <img  src={imgObj.img} style={{height:"318px"}}/>
+                              </Grid>
+                            )
+                          }}
+                        </Draggable>
+                      )
+                    }):
+                      <Grid dir='rtl' position="absolute">
+                        لطفا عکس به این لیست اضاف کنید.
+                      </Grid>
+                    }
+                    {provided.placeholder}
+                </Grid>
+              )
+            }}
+          </Droppable>
+          
+        </Grid>
+        <Grid xs={12} display="flex" justifyContent="center" mt={5} dir="rtl">
+          <h2>لیست مرتب نشده</h2>
+        </Grid>
+        <Grid display='flex' justifyContent='center' border="1px solid black" container>
+          <Droppable droppableId='Root1' key='Root1' direction='horizontal' >
+            {(provided)=>{
+              return(
+                <Grid item xs={12} {...provided.droppableProps} ref={provided.innerRef} display='flex' justifyContent='center'  alignItems='center' height={"318px"}>
+                    {unorderedList.length!=0?unorderedList.map((imgObj,index)=>{
+                      return(
+                        <Draggable key={imgObj.id} draggableId={imgObj.id.toString()} index={index}>
+                          {(provided)=>{
+                            return(
+                              <Grid 
+                              pt="5px"
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps} >
+                                <img  src={imgObj.img} style={{height:"318px"}}/>
+                              </Grid>
+                            )
+                          }}
+                        </Draggable>
+                      )
+                    }):
+                      <Grid dir='rtl' position="absolute">
+                        لیست نامرتب شما خالی شده است.
+                      </Grid>
+                    }
+                    {provided.placeholder}
+                </Grid>
+              )
+            }}
+          </Droppable>
+          
+        </Grid>
+      </DragDropContext>
       <Grid xs={12} display='flex' justifyContent='center' dir="rtl" pt="10px">
         <Button variant='contained' sx={{"&:hover": { backgroundColor: "#CB929B" }}} disabled={unorderedList.length!=0} onClick={handleSubmit}>تایید</Button>
         <Button variant='contained' sx={{"&:hover": { backgroundColor: "#CB929B" },mr:"10px"}} disabled={unorderedList.length==7} onClick={()=>refreshList()} >بازگرداندن</Button>
